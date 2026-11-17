@@ -6,7 +6,6 @@ const PORT = 3001;
 
 app.use(express.json());
 
-// Temporary positions — replace with actual locations
 const characters = {
   Waldo: { x: 0.467, y: 0.608 },
   Wizard: { x: 0.030, y: 0.291 },

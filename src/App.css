@@ -53,3 +53,20 @@
 .character-menu button:hover {
   background: #eee;
 }
+
+.found-marker {
+  position: absolute;
+  width: 3%;
+  min-width: 18px;
+  max-width: 32px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #22c55e;
+  color: white;
+  font-weight: bold;
+  display: grid;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 5;
+}
