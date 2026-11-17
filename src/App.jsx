@@ -3,9 +3,11 @@ import "./App.css";
 
 const characters = ["Waldo", "Wizard", "Wilma"];
 
+
 function App() {
   const [target, setTarget] = useState(null);
   const [message, setMessage] = useState("");
+  const [isChecking, setIsChecking] = useState(false);
 
   function handleImageClick(e) {
     e.stopPropagation();
@@ -16,12 +18,48 @@ function App() {
     const y = (e.clientY - rect.top) / rect.height;
 
     setTarget({ x, y });
+    console.log(`x: ${x.toFixed(3)}, y: ${y.toFixed(3)}`);
   }
 
-  function handleCharacterSelect(character) {
-    setMessage(`You selected ${character}!`);
-    setTarget(null);
+  
+async function handleCharacterSelect(character) {
+  if (!target || isChecking) return;
+
+  setIsChecking(true);
+  setTarget(null);
+
+  try {
+    const response = await fetch("/api/validate-guess", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        character,
+        x: target.x,
+        y: target.y,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to validate guess");
+    }
+
+    const data = await response.json();
+
+    if (data.correct) {
+      setMessage(`Correct! You found ${character}!`);
+    } else {
+      setMessage(`Incorrect! Try again.`);
+    }
+  } catch (error) {
+    console.error(error);
+    setMessage("Something went wrong. Please try again.");
+  } finally {
+    setIsChecking(false);
   }
+}
+
 
   return (
     <main className="app" onClick={() => setTarget(null)}>
