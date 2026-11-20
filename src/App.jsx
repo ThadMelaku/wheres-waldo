@@ -1,5 +1,3 @@
-
-
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
@@ -20,7 +18,11 @@ function formatTime(ms) {
 
 async function getScores() {
   const response = await fetch("/api/scores");
-  if (!response.ok) throw new Error("Failed to load scores");
+
+  if (!response.ok) {
+    throw new Error("Failed to load scores");
+  }
+
   return response.json();
 }
 
@@ -46,15 +48,17 @@ function App() {
 
   const remainingCharacters = characters.filter(
     (character) =>
-      !foundCharacters.some((found) => found.character === character)
+      !foundCharacters.some(
+        (found) => found.character === character
+      )
   );
 
-  // Load existing leaderboard
+  // Load leaderboard
   useEffect(() => {
     getScores().then(setScores).catch(console.error);
   }, []);
 
-  // Display timer. Official time comes from Express.
+  // Display timer (official time is calculated by Express)
   useEffect(() => {
     if (!gameId || finished) return;
 
@@ -65,7 +69,7 @@ function App() {
     return () => clearInterval(interval);
   }, [gameId, finished]);
 
-  // Begin game once image loads
+  // Start game when image loads
   async function handleImageLoad() {
     if (startingRef.current) return;
     startingRef.current = true;
@@ -75,7 +79,9 @@ function App() {
         method: "POST",
       });
 
-      if (!response.ok) throw new Error("Failed to start game");
+      if (!response.ok) {
+        throw new Error("Failed to start game");
+      }
 
       const data = await response.json();
 
@@ -99,13 +105,31 @@ function App() {
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
 
-    setTarget({ x, y });
+    // Determine whether dropdown should open upward
+    const menuHeight = remainingCharacters.length * 44 + 12;
+
+    const roomBelow =
+      Math.min(rect.bottom, window.innerHeight) - e.clientY;
+
+    const roomAbove =
+      e.clientY - Math.max(rect.top, 0);
+
+    const menuAbove =
+      roomBelow < menuHeight + 35 &&
+      roomAbove > roomBelow;
+
+    setTarget({ x, y, menuAbove });
   }
 
+  // Validate character selection with Express
   async function handleCharacterSelect(character) {
     if (!gameId || !target || isChecking || finished) return;
 
-    const guess = { ...target };
+    const guess = {
+      x: target.x,
+      y: target.y,
+    };
+
     setTarget(null);
     setIsChecking(true);
 
@@ -114,8 +138,13 @@ function App() {
         `/api/games/${gameId}/guess`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ character, ...guess }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            character,
+            ...guess,
+          }),
         }
       );
 
@@ -137,7 +166,7 @@ function App() {
           setFinished(true);
           setElapsedMs(data.elapsedMs);
           setQualifies(data.qualifies);
-          setMessage("Congratulations! You found everyone!");
+          setMessage("");
         }
       } else {
         setMessage("Incorrect! Try again.");
@@ -150,8 +179,10 @@ function App() {
     }
   }
 
+  // Submit leaderboard score
   async function handleScoreSubmit(e) {
     e.preventDefault();
+
     if (saving || submitted) return;
 
     setSaving(true);
@@ -162,7 +193,9 @@ function App() {
         `/api/games/${gameId}/score`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({ name: playerName }),
         }
       );
@@ -188,116 +221,157 @@ function App() {
 
   return (
     <main className="app" onClick={() => setTarget(null)}>
-      <h1>Where's Waldo?</h1>
-        <div className="character-guide">
-          {characters.map((character) => {
-            const isFound = foundCharacters.some(
-              (found) => found.character === character
-            );
+      
 
-            return (
-              <div
-                key={character}
-                className={`character-card ${isFound ? "found" : ""}`}
-              >
-                <img
-                  src={characterImages[character]}
-                  alt={character}
-                />
-                <span>{character} {isFound && "✓"}</span>
-              </div>
-            );
-          })}
-        </div>
-      <div className="game-info">
-        <p>Time: {gameId ? formatTime(elapsedMs) : "Starting..."}</p>
-        <p>Found: {foundCharacters.length} / {characters.length}</p>
-      </div>
-
-      <div className="image-container" onClick={handleImageClick}>
-        <img
-          src="/scene.jpg"
-          alt="Hidden character puzzle"
-          onLoad={handleImageLoad}
-        />
-
-        {foundCharacters.map((found) => (
+      <div className="game-layout">
+        {/* Left side: Puzzle image */}
+        <section className="puzzle-panel">
+          <h1>Where's Waldo?</h1>
           <div
-            key={found.character}
-            className="found-marker"
-            style={{
-              left: `${found.x * 100}%`,
-              top: `${found.y * 100}%`,
-            }}
-            title={found.character}
+            className="image-container"
+            onClick={handleImageClick}
           >
-            ✓
-          </div>
-        ))}
-
-        {target && (
-          <>
-            <div
-              className="target-box"
-              style={{
-                left: `${target.x * 100}%`,
-                top: `${target.y * 100}%`,
-              }}
+            <img
+              src="/scene.jpg"
+              alt="Hidden character puzzle"
+              onLoad={handleImageLoad}
             />
 
-            <div
-              className="character-menu"
-              style={{
-                left: `clamp(90px, ${target.x * 100}%, calc(100% - 90px))`,
-                top: `${target.y * 100}%`,
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {remainingCharacters.map((character) => (
-                <button
-                  key={character}
-                  disabled={isChecking}
-                  onClick={() => handleCharacterSelect(character)}
+            {/* Markers for found characters */}
+            {foundCharacters.map((found) => (
+              <div
+                key={found.character}
+                className="found-marker"
+                style={{
+                  left: `${found.x * 100}%`,
+                  top: `${found.y * 100}%`,
+                }}
+                title={found.character}
+              >
+                ✓
+              </div>
+            ))}
+
+            {/* Targeting box and dropdown */}
+            {target && (
+              <>
+                <div
+                  className="target-box"
+                  style={{
+                    left: `${target.x * 100}%`,
+                    top: `${target.y * 100}%`,
+                  }}
+                />
+
+                <div
+                  className={`character-menu ${
+                    target.menuAbove ? "menu-above" : ""
+                  }`}
+                  style={{
+                    left: `clamp(90px, ${target.x * 100}%, calc(100% - 90px))`,
+                    top: `${target.y * 100}%`,
+                  }}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {character}
-                </button>
-              ))}
+                  {remainingCharacters.map((character) => (
+                    <button
+                      key={character}
+                      disabled={isChecking}
+                      onClick={() =>
+                        handleCharacterSelect(character)
+                      }
+                    >
+                      {character}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        
+        </section>
+
+        {/* Right Side: Sticky sidebar */}
+        <aside className="game-sidebar">
+          {/* Character reference images */}
+          <h2>Find These Characters</h2>
+
+          <div className="character-guide">
+            {characters.map((character) => {
+              const isFound = foundCharacters.some(
+                (found) => found.character === character
+              );
+
+              return (
+                <div
+                  key={character}
+                  className={`character-card ${
+                    isFound ? "found" : ""
+                  }`}
+                >
+                  <img
+                    src={characterImages[character]}
+                    alt={character}
+                  />
+                  <span>
+                    {character} {isFound && "✓"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Timer and progress */}
+          <div className="game-info">
+            <p>
+              {finished ? "Final time" : "Time"}:{" "}
+              {gameId ? formatTime(elapsedMs) : "Starting..."}
+            </p>
+            <p>
+              Found: {foundCharacters.length} / {characters.length}
+            </p>
+          </div>
+          {finished && (
+            <div className="completion-message">
+              {qualifies ? (
+                <>
+                  <h3>🎉 Congratulations!</h3>
+                  <p>You made the top 10!</p>
+                </>
+              ) : (
+                <p>You found everyone!</p>
+              )}
+              
             </div>
-          </>
-        )}
+          )}
+
+          {/* Leaderboard */}
+          <section className="leaderboard">
+            <h2>Leaderboard — Top 10</h2>
+
+            {scores.length === 0 ? (
+              <p>No scores yet. Be the first!</p>
+            ) : (
+              <ol>
+                {scores.map((score, index) => (
+                  <li key={`${index}-${score.name}`}>
+                    <span>{score.name}</span>
+                    <span>{formatTime(score.elapsedMs)}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        </aside>
       </div>
 
-      <p role="status">{message}</p>
-
-      {finished && (
-        <h2>Final time: {formatTime(elapsedMs)}</h2>
-      )}
-
-      {finished && !qualifies && (
-        <p>Your time did not make the top 10.</p>
-      )}
-
-      {submitted && <p>Score saved successfully!</p>}
-
-      <section className="leaderboard">
-        <h2>Leaderboard — Top 10</h2>
-        {scores.length === 0 ? (
-          <p>No scores yet. Be the first!</p>
-        ) : (
-          <ol>
-            {scores.map((score, index) => (
-              <li key={`${index}-${score.name}`}>
-                <span>{score.name}</span>
-                <span>{formatTime(score.elapsedMs)}</span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
-
+      {/* Score submission popup */}
       {finished && qualifies && !submitted && (
         <div className="score-overlay">
-          <form className="score-modal" onSubmit={handleScoreSubmit}>
+          <form
+            className="score-modal"
+            onSubmit={handleScoreSubmit}
+          >
             <h2>You made the top 10!</h2>
             <p>Your time: {formatTime(elapsedMs)}</p>
 
@@ -306,7 +380,9 @@ function App() {
               id="player-name"
               type="text"
               value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
+              onChange={(e) =>
+                setPlayerName(e.target.value)
+              }
               maxLength={30}
               required
               autoFocus
@@ -316,7 +392,9 @@ function App() {
               {saving ? "Saving..." : "Submit score"}
             </button>
 
-            {scoreError && <p role="alert">{scoreError}</p>}
+            {scoreError && (
+              <p role="alert">{scoreError}</p>
+            )}
           </form>
         </div>
       )}
