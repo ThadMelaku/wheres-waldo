@@ -4,6 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 const characters = ["Waldo", "Wizard", "Wilma"];
+const characterImages = {
+  Waldo: "/characters/waldo.png",
+  Wizard: "/characters/wizard.png",
+  Wilma: "/characters/wilma.png",
+};
 
 function formatTime(ms) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -184,7 +189,26 @@ function App() {
   return (
     <main className="app" onClick={() => setTarget(null)}>
       <h1>Where's Waldo?</h1>
+        <div className="character-guide">
+          {characters.map((character) => {
+            const isFound = foundCharacters.some(
+              (found) => found.character === character
+            );
 
+            return (
+              <div
+                key={character}
+                className={`character-card ${isFound ? "found" : ""}`}
+              >
+                <img
+                  src={characterImages[character]}
+                  alt={character}
+                />
+                <span>{character} {isFound && "✓"}</span>
+              </div>
+            );
+          })}
+        </div>
       <div className="game-info">
         <p>Time: {gameId ? formatTime(elapsedMs) : "Starting..."}</p>
         <p>Found: {foundCharacters.length} / {characters.length}</p>
