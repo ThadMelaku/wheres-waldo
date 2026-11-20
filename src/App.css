@@ -70,3 +70,76 @@
   pointer-events: none;
   z-index: 5;
 }
+
+.game-info {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.leaderboard {
+  max-width: 450px;
+  margin: 32px auto;
+}
+
+.leaderboard ol {
+  padding-left: 32px;
+}
+
+.leaderboard li {
+  padding: 10px;
+  display: list-item;
+  text-align: left;
+}
+
+.leaderboard li span:last-child {
+  float: right;
+}
+
+.score-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.score-modal {
+  background: #333;
+  color: white;
+  padding: 32px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
+}
+
+.score-modal input {
+  padding: 12px;
+  font-size: 1rem;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  background: white;
+  color: #222;
+}
+
+.score-modal button {
+  padding: 12px;
+  background: #22c55e;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.score-modal button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
