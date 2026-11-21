@@ -1,17 +1,20 @@
-
+import path from "node:path";
+import process from "node:process";
 import express from "express";
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
 
-const db = new DatabaseSync(
-  fileURLToPath(new URL("./waldo.sqlite", import.meta.url))
-);
+const databasePath = process.env.RAILWAY_VOLUME_MOUNT_PATH
+  ? path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, "waldo.sqlite")
+  : fileURLToPath(new URL("./waldo.sqlite", import.meta.url));
+
+const db = new DatabaseSync(databasePath);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS games (
@@ -189,7 +192,15 @@ app.post("/api/games/:gameId/score", (req, res) => {
   res.status(201).json({ saved: true });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+// Serve the production React build
+const distPath = fileURLToPath(
+  new URL("../dist/", import.meta.url)
+);
+
+app.use(express.static(distPath));
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Database: ${databasePath}`);
 });
 
